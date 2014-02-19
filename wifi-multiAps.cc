@@ -1,18 +1,18 @@
-/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
+/* -*- Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2005,2006,2007 INRIA
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details. 
- * Original Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
- * Modified Author: Alvin Hsu <alvin1019127@gmail.com>
- */
+* Copyright (c) 2005,2006,2007 INRIA
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 2 as
+* published by the Free Software Foundation;
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+* Original Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
+* Modified Author: Alvin Hsu <alvin1019127@gmail.com>
+*/
 
 
 #include "ns3/core-module.h"
@@ -42,10 +42,10 @@ class MultipleAp
     void Run();
     void DevTxTrace (std::string context, Ptr<const Packet> p);
     void DevRxTrace (std::string context, Ptr<const Packet> p);
-    void PhyRxOkTrace (std::string context, Ptr<const Packet> packet, 
+    void PhyRxOkTrace (std::string context, Ptr<const Packet> packet,
               double snr, WifiMode mode, enum WifiPreamble preamble);
     void PhyRxErrorTrace (std::string context, Ptr<const Packet> packet, double snr);
-    void PhyTxTrace (std::string context, Ptr<const Packet> packet, 
+    void PhyTxTrace (std::string context, Ptr<const Packet> packet,
             WifiMode mode, WifiPreamble preamble, uint8_t txPower);
     void PhyStateTrace (std::string context, Time start, Time duration, enum WifiPhy::State state);
     Vector GetPosition (Ptr<Node> node);
@@ -82,7 +82,7 @@ MultipleAp::MultipleAp()
   m_bytesTotal = 0;
 }
 
-void 
+void
 MultipleAp::SetApStaNumber(int in_apNum, int in_staNum)
 {
   m_apNum = in_apNum;
@@ -91,36 +91,36 @@ MultipleAp::SetApStaNumber(int in_apNum, int in_staNum)
   m_ap.Create(m_apNum);
 }
 
-void 
+void
 MultipleAp::SetWifiMac()
 {
   // Create wifi channel
   Ptr<MatrixPropagationLossModel> lossModel = CreateObject<MatrixPropagationLossModel> ();
-  lossModel->SetDefaultLoss (20); 
-  m_wifiChannel = CreateObject <YansWifiChannel> ();  
+  lossModel->SetDefaultLoss (20);
+  m_wifiChannel = CreateObject <YansWifiChannel> ();
   m_wifiChannel->SetPropagationLossModel (lossModel);
   m_wifiChannel->SetPropagationDelayModel (CreateObject <ConstantSpeedPropagationDelayModel> ());
-  // IP interface and MAC 
+  // IP interface and MAC
   m_wifiMac = NqosWifiMacHelper::Default ();
   m_wifiPhy = YansWifiPhyHelper::Default ();
   m_wifiPhy.SetChannel (m_wifiChannel);
-  m_wifi.SetRemoteStationManager ("ns3::ArfWifiManager");   
+  m_wifi.SetRemoteStationManager ("ns3::ArfWifiManager");
   m_stack.Install (m_ap);
   m_stack.Install (m_stas);
   Ipv4AddressHelper ipv4;
   ipv4.SetBase ("10.0.0.0", "255.0.0.0");
   // setup ap
   for (int i = 0; i < m_apNum; ++i) {
-    std::ostringstream oss;    
+    std::ostringstream oss;
     oss << "wifi-default-" << i;
     Ssid ssid = Ssid (oss.str ());
     m_wifiMac.SetType ("ns3::ApWifiMac",
                      "Ssid", SsidValue (ssid));
-    m_apDevs.Add(m_wifi.Install (m_wifiPhy, m_wifiMac, m_ap.Get(i)));    
+    m_apDevs.Add(m_wifi.Install (m_wifiPhy, m_wifiMac, m_ap.Get(i)));
     m_apInterface.Add(ipv4.Assign(m_apDevs.Get(i)));
   }
   // setup stas and the number of stas is average in every Ssid
-  for (int i = 0; i < m_staNum; ++i) {    
+  for (int i = 0; i < m_staNum; ++i) {
     std::ostringstream oss;
     int serveNum = m_staNum/m_apNum;
     oss << "wifi-default-" << static_cast<int>(i/serveNum);
@@ -133,7 +133,7 @@ MultipleAp::SetWifiMac()
   }
 }
 
-void 
+void
 MultipleAp::SetMobility()
 {
   // the position is used for --visualize, in fact no hidden terminals
@@ -145,72 +145,76 @@ MultipleAp::SetMobility()
   m_nodePosAlloc = CreateObject<ListPositionAllocator> ();
   double m_radius = 100;
   for(int i=0; i<m_apNum; ++i){
-    m_apPosAlloc->Add(Vector(m_radius*std::cos(i*2*PI/m_apNum), 
+    m_apPosAlloc->Add(Vector(m_radius*std::cos(i*2*PI/m_apNum),
                       m_radius*std::sin(i*2*PI/m_apNum), 1));
   }
   m_mobility.SetPositionAllocator(m_apPosAlloc);
   for(int i=0; i<m_apNum; ++i){
-    m_mobility.Install(m_ap.Get(i));  
+    m_mobility.Install(m_ap.Get(i));
   }
   
   for(int i=0; i<m_staNum; ++i){
    size_t inAp = i/(m_staNum/m_apNum);
-   double nodeRadius = rand()%25+(rand()%1000)/1000;
+   int serveNum = m_staNum/m_apNum;
+   double nodeRadius = 50;
    m_nodePosAlloc->Add(Vector(m_radius*std::cos(inAp*2*PI/m_apNum)+
-                       nodeRadius*std::cos((rand()%(2*PI_e5))/pow(10, 5)), 
+                       nodeRadius*std::cos(2*PI/serveNum*(i%serveNum)),
                        m_radius*std::sin(inAp*2*PI/m_apNum)+
-                       nodeRadius*std::sin((rand()%(2*PI_e5))/pow(10, 5)), 
+                       nodeRadius*std::sin(2*PI/serveNum*(i%serveNum)),
                        1));
   }
   m_mobility.SetPositionAllocator(m_nodePosAlloc);
   for(int i=0; i<m_staNum; ++i){
-    m_mobility.Install(m_stas.Get(i));  
-  }   
+    m_mobility.Install(m_stas.Get(i));
+  }
 }
 
 void
 MultipleAp::SetApp()
-{ 
+{
   int serveNum = m_staNum/m_apNum;
+  std::cout << "=== " << m_apNum << ", " << m_staNum << " ===\n";
   for (int i = 0; i < m_staNum; ++i){
-    std::cout << m_staInterface.GetAddress(i) << ":" << 
-              m_apInterface.GetAddress(static_cast<int>(i/serveNum)) << "\n";
+    //std::cout << m_staInterface.GetAddress(i) << ":" <<
+    //          m_apInterface.GetAddress(static_cast<int>(i/serveNum)) << "\n";
     // Using poisson arrival traffic as onoff application
     OnOffHelper onoff("ns3::UdpSocketFactory", InetSocketAddress(m_staInterface.GetAddress(i), 5010));
-    onoff.SetAttribute("OnTime",  StringValue ("ns3::ConstantRandomVariable[Constant=0.005]"));
-    onoff.SetAttribute("OffTime", StringValue ("ns3::ExponentialRandomVariable[Mean=0.05]"));
+    //onoff.SetAttribute("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.005]"));
+    //onoff.SetAttribute("OffTime", StringValue ("ns3::ExponentialRandomVariable[Mean=0.05]"));
+    onoff.SetAttribute("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+    onoff.SetAttribute("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
     // NS3's bug data rate and start time should be different
     std::ostringstream oss;
-    oss << "50" << i << "kb/s";
+    oss << 20/serveNum << "Mbps";
     onoff.SetAttribute("DataRate", StringValue(oss.str()));
-    onoff.SetAttribute("PacketSize", UintegerValue (200));
+    onoff.SetAttribute("PacketSize", UintegerValue (1024));
     onoff.SetAttribute("StartTime", TimeValue (Seconds (1.000000+std::rand()%100/100.0)));
     m_cbrApps.Add(onoff.Install(m_ap.Get(static_cast<int>(i/serveNum))));
-    m_cbrApps.Start(Seconds(3.0));
+    m_cbrApps.Start(Seconds(1.0));
     m_cbrApps.Stop(Seconds(10));
     // NS3's bug any data transmission is after echo transmission
-    uint16_t  echoPort = 9;
+    uint16_t echoPort = 9;
     UdpEchoClientHelper echoClientHelper (m_apInterface.GetAddress(static_cast<int>(i/serveNum)), echoPort);
     echoClientHelper.SetAttribute ("MaxPackets", UintegerValue (1));
     echoClientHelper.SetAttribute ("Interval", TimeValue (Seconds (0.001)));
     echoClientHelper.SetAttribute ("PacketSize", UintegerValue (10));
     echoClientHelper.SetAttribute ("StartTime", TimeValue (Seconds (0.001+i/20.0)));
-    m_pingApps.Add (echoClientHelper.Install (m_stas.Get (i))); 
+    m_pingApps.Add (echoClientHelper.Install (m_stas.Get (i)));
   }
 }
 
 void
 MultipleAp::Run()
-{  
+{
   double totalThroughput = 0;
   FlowMonitorHelper flowmon;
   Ptr<FlowMonitor> monitor = flowmon.InstallAll ();
-  Simulator::Stop (Seconds (14.0));
+  Simulator::Stop (Seconds (12.0));
   
-  //Config::Connect ("/NodeList/*/DeviceList/*/Phy/State/RxOk", 
-  //                  MakeCallback (&MultipleAp::PhyRxOkTrace, this));
-  //Config::Connect ("/NodeList/*/DeviceList/*/Phy/State/RxError", 
-  //                  MakeCallback (&MultipleAp::PhyRxErrorTrace, this));
+  //Config::Connect ("/NodeList/*/DeviceList/*/Phy/State/RxOk",
+  // MakeCallback (&MultipleAp::PhyRxOkTrace, this));
+  //Config::Connect ("/NodeList/*/DeviceList/*/Phy/State/RxError",
+  // MakeCallback (&MultipleAp::PhyRxErrorTrace, this));
   //
   Simulator::Run ();
   
@@ -218,19 +222,20 @@ MultipleAp::Run()
   monitor->CheckForLostPackets ();
   Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier ());
   std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats ();
-  for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); 
+  for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin ();
        i != stats.end (); ++i){
       Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
-      std::cout << "Flow " << i->first << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";  
-      std::cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
-      std::cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
-      std::cout << "  Throughput: " << i->second.rxBytes*8.0/9.0/1024/1024 << " Mbps\n";
+      std::cout << "Flow " << i->first << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
+      std::cout << " Tx Bytes: " << i->second.txBytes << "\n";
+      std::cout << " Rx Bytes: " << i->second.rxBytes << "\n";
+      std::cout << " Throughput: " << i->second.rxBytes*8.0/9.0/1024/1024 << " Mbps\n";
       totalThroughput+=(i->second.rxBytes*8.0/9.0/1024/1024);
   }
   Simulator::Destroy ();
   std::cout << "Total throughput: " << totalThroughput << "\n";
-  std::cout << "Average throughput per AP: " << totalThroughput/m_apNum << "\n";
-  std::cout << "Average throughput per sta: " << totalThroughput/m_staNum << "\n";
+  std::cout << "======================\n";
+  //std::cout << "Average throughput per AP: " << totalThroughput/m_apNum << "\n";
+  //std::cout << "Average throughput per sta: " << totalThroughput/m_staNum << "\n";
   //std::cout << m_rxOkCount << " " << m_bytesTotal << "\n";
 }
 
@@ -246,15 +251,15 @@ MultipleAp::DevRxTrace (std::string context, Ptr<const Packet> p)
 }
 
 void
-MultipleAp::PhyRxOkTrace (std::string context, Ptr<const Packet> packet, 
+MultipleAp::PhyRxOkTrace (std::string context, Ptr<const Packet> packet,
               double snr, WifiMode mode, enum WifiPreamble preamble)
 {
   Ptr<Packet> m_currentPacket;
   WifiMacHeader hdr;
   double currentByte = packet->GetSize();
   m_currentPacket = packet->Copy();
-  m_currentPacket->RemoveHeader (hdr);  
-  if(hdr.IsData()){    
+  m_currentPacket->RemoveHeader (hdr);
+  if(hdr.IsData()){
     m_rxOkCount++;
     m_bytesTotal+=currentByte;
   }
@@ -266,15 +271,15 @@ MultipleAp::PhyRxErrorTrace (std::string context, Ptr<const Packet> packet, doub
 }
 
 void
-MultipleAp::PhyTxTrace (std::string context, Ptr<const Packet> packet, 
+MultipleAp::PhyTxTrace (std::string context, Ptr<const Packet> packet,
             WifiMode mode, WifiPreamble preamble, uint8_t txPower)
-{  
+{
 }
 
 void
-MultipleAp::PhyStateTrace (std::string context, Time start, 
+MultipleAp::PhyStateTrace (std::string context, Time start,
              Time duration, enum WifiPhy::State state)
-{  
+{
 }
 
 void
@@ -296,7 +301,8 @@ int main (int argc, char *argv[])
   CommandLine cmd;
   int apNum;
   int staNum;
-  cmd.Usage ("[apNum] [staNum]");
+  // ./waf --run="scratch/wifi-ap --apNum=2 --staNum=8" --visualize
+  //cmd.Usage ("[apNum] [staNum]");
   cmd.AddValue ("apNum", "number of WiFi APs", apNum);
   cmd.AddValue ("staNum", "number of STAs", staNum);
   cmd.Parse (argc, argv);
@@ -304,11 +310,11 @@ int main (int argc, char *argv[])
   // enable rts cts all the time.
   Config::SetDefault ("ns3::WifiRemoteStationManager::RtsCtsThreshold", StringValue ("0"));
   // disable fragmentation
-  Config::SetDefault ("ns3::WifiRemoteStationManager::FragmentationThreshold", StringValue ("2200"));  
+  Config::SetDefault ("ns3::WifiRemoteStationManager::FragmentationThreshold", StringValue ("2200"));
   MultipleAp myExp;
   myExp.SetApStaNumber(apNum, staNum);
-  myExp.SetWifiMac();  
-  myExp.SetMobility(); 
+  myExp.SetWifiMac();
+  myExp.SetMobility();
   myExp.SetApp();
   myExp.Run();
   return 0;
