@@ -51,6 +51,7 @@ class MultipleAp
     Vector GetPosition (Ptr<Node> node);
     void GenerateTraffic (Ptr<Socket> socket, uint32_t pktSize, 
                              uint32_t pktCount, Time pktInterval );
+    Ptr<Socket> SetupPacketReceive (Ptr<Node> node);
     void SetPosition (Ptr<Node> node, Vector position);
   private:
     int m_apNum;
@@ -68,6 +69,7 @@ class MultipleAp
     NqosWifiMacHelper m_wifiMac;
     YansWifiPhyHelper m_wifiPhy;
     Ptr<YansWifiChannel> m_wifiChannel;
+    YansWifiChannelHelper m_wifiChannel2;
     PacketSocketAddress m_socket;
     InternetStackHelper m_stack;
     Ipv4InterfaceContainer m_staInterface;
@@ -97,15 +99,22 @@ void
 MultipleAp::SetWifiMac()
 {
   // Create wifi channel
+  /*
   Ptr<MatrixPropagationLossModel> lossModel = CreateObject<MatrixPropagationLossModel> ();
-  lossModel->SetDefaultLoss (20);
+  lossModel->SetDefaultLoss (0);
   m_wifiChannel = CreateObject <YansWifiChannel> ();
   m_wifiChannel->SetPropagationLossModel (lossModel);
   m_wifiChannel->SetPropagationDelayModel (CreateObject <ConstantSpeedPropagationDelayModel> ());
+  */
+  m_wifiChannel2.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+  m_wifiChannel2.AddPropagationLoss ("ns3::TwoRayGroundPropagationLossModel",
+                                  "SystemLoss",DoubleValue (1.0),
+                                  "MinDistance",DoubleValue (0.5),
+                                  "HeightAboveZ",DoubleValue (1) );
   // IP interface and MAC
   m_wifiMac = NqosWifiMacHelper::Default ();
   m_wifiPhy = YansWifiPhyHelper::Default ();
-  m_wifiPhy.SetChannel (m_wifiChannel);
+  m_wifiPhy.SetChannel (m_wifiChannel2.Create());
   m_wifi.SetRemoteStationManager ("ns3::ArfWifiManager");
   m_stack.Install (m_ap);
   m_stack.Install (m_stas);
@@ -158,7 +167,7 @@ MultipleAp::SetMobility()
   for(int i=0; i<m_staNum; ++i){
    size_t inAp = i/(m_staNum/m_apNum);
    int serveNum = m_staNum/m_apNum;
-   double nodeRadius = 50;
+   double nodeRadius = 5;
    m_nodePosAlloc->Add(Vector(m_radius*std::cos(inAp*2*PI/m_apNum)+
                        nodeRadius*std::cos(2*PI/serveNum*(i%serveNum)),
                        m_radius*std::sin(inAp*2*PI/m_apNum)+
@@ -171,6 +180,17 @@ MultipleAp::SetMobility()
   }
 }
 
+Ptr<Socket>
+MultipleAp::SetupPacketReceive (Ptr<Node> node)
+{
+  TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+  Ptr<Socket> sink = Socket::CreateSocket (node, tid);
+  InetSocketAddress local = InetSocketAddress (Ipv4Address::GetAny (), 80);
+  sink->Bind (local);
+  //sink->SetRecvCallback (MakeCallback (&MultipleAp::ReceivePacket, this));
+  return sink;
+}
+
 void
 MultipleAp::SetApp()
 {
@@ -178,15 +198,16 @@ MultipleAp::SetApp()
   std::cout << "=== " << m_apNum << ", " << m_staNum << " ===\n";
   for (int i = 0; i < m_staNum; ++i){
     TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+    Ptr<Socket> recvSink = SetupPacketReceive (m_stas.Get(i));
     Ptr<Socket> source = Socket::CreateSocket(m_ap.Get(static_cast<int>(i/serveNum)), tid);
-    InetSocketAddress remote = InetSocketAddress(m_staInterface.GetAddress(i), 80);
-    //source->SetAllowBroadcast (true);
+    InetSocketAddress remote = InetSocketAddress(m_staInterface.GetAddress(i), 80+i);
+    source->SetAllowBroadcast (true);
     source->Connect(remote);
     uint32_t packetSize = 1014;
     uint32_t maxPacketCount = 20000;
-    Time interPacketInterval = Seconds (0.01);
+    Time interPacketInterval = Seconds(0.01);
     Simulator::Schedule(Seconds(1.0+static_cast<double>(i)/100), &MultipleAp::GenerateTraffic, 
-                       this, source, packetSize, maxPacketCount,interPacketInterval);
+                       this, source, packetSize, maxPacketCount, interPacketInterval);
   }
 }
 
@@ -256,16 +277,14 @@ void
 MultipleAp::GenerateTraffic (Ptr<Socket> socket, uint32_t pktSize, 
                              uint32_t pktCount, Time pktInterval )
 {
-  if (pktCount > 0)
-    {
-      socket->Send (Create<Packet> (pktSize));
-      Simulator::Schedule (pktInterval, &MultipleAp::GenerateTraffic, this, 
-                           socket, pktSize, pktCount-1, pktInterval);
-    }
-  else
-    {
-      socket->Close ();
-    }
+  if (pktCount>0){
+    socket->Send (Create<Packet> (pktSize));
+    Simulator::Schedule (pktInterval, &MultipleAp::GenerateTraffic, this, 
+                         socket, pktSize, pktCount-1, pktInterval);
+  }else
+  {
+    socket->Close ();
+  }
 }
 
 void
@@ -311,7 +330,7 @@ int main (int argc, char *argv[])
   cmd.Parse (argc, argv);
   Packet::EnablePrinting ();
   // enable rts cts all the time.
-  Config::SetDefault ("ns3::WifiRemoteStationManager::RtsCtsThreshold", StringValue ("20000"));
+  Config::SetDefault ("ns3::WifiRemoteStationManager::RtsCtsThreshold", StringValue ("0"));
   // disable fragmentation
   Config::SetDefault ("ns3::WifiRemoteStationManager::FragmentationThreshold", StringValue ("2200"));
   MultipleAp myExp;
