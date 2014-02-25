@@ -122,17 +122,20 @@ MultipleAp::SetWifiMac()
   ipv4.SetBase ("10.0.0.0", "255.0.0.0");
   // setup ap
   for (int i = 0; i < m_apNum; ++i) {    
+    /*
     std::ostringstream oss;
     oss << "wifi-default-" << i;
     Ssid ssid = Ssid (oss.str ());
     m_wifiMac.SetType ("ns3::ApWifiMac",
                      "Ssid", SsidValue (ssid));
-    //m_wifiMac.SetType ("ns3::AdhocWifiMac");
+    */
+    m_wifiMac.SetType ("ns3::AdhocWifiMac");
     m_apDevs.Add(m_wifi.Install (m_wifiPhy, m_wifiMac, m_ap.Get(i)));
     m_apInterface.Add(ipv4.Assign(m_apDevs.Get(i)));
   }
   // setup stas and the number of stas is average in every Ssid
   for (int i = 0; i < m_staNum; ++i) {
+    /*
     std::ostringstream oss;
     int serveNum = m_staNum/m_apNum;
     oss << "wifi-default-" << static_cast<int>(i/serveNum);
@@ -140,7 +143,8 @@ MultipleAp::SetWifiMac()
     m_wifiMac.SetType ("ns3::StaWifiMac",
                      "Ssid", SsidValue (ssid),
                      "ActiveProbing", BooleanValue (false));
-    //m_wifiMac.SetType ("ns3::AdhocWifiMac");
+    */
+    m_wifiMac.SetType ("ns3::AdhocWifiMac");
     m_staDevs.Add(m_wifi.Install (m_wifiPhy, m_wifiMac, m_stas.Get(i)));
     m_staInterface.Add(ipv4.Assign(m_staDevs.Get(i)));
   }
@@ -156,7 +160,7 @@ MultipleAp::SetMobility()
   m_mobility.SetMobilityModel ("ns3::ConstantVelocityMobilityModel");
   m_apPosAlloc = CreateObject<ListPositionAllocator> ();
   m_nodePosAlloc = CreateObject<ListPositionAllocator> ();
-  double m_radius = 50;
+  double m_radius = 100;
   for(int i=0; i<m_apNum; ++i){
     m_apPosAlloc->Add(Vector(m_radius*std::cos(i*2*PI/m_apNum),
                       m_radius*std::sin(i*2*PI/m_apNum), 1));
@@ -169,7 +173,7 @@ MultipleAp::SetMobility()
   for(int i=0; i<m_staNum; ++i){
    size_t inAp = i/(m_staNum/m_apNum);
    int serveNum = m_staNum/m_apNum;
-   double nodeRadius = 20;
+   double nodeRadius = 10;
    m_nodePosAlloc->Add(Vector(m_radius*std::cos(inAp*2*PI/m_apNum)+
                        nodeRadius*std::cos(2*PI/serveNum*(i%serveNum)),
                        m_radius*std::sin(inAp*2*PI/m_apNum)+
@@ -189,7 +193,7 @@ MultipleAp::SetApp()
 {
   int serveNum = m_staNum/m_apNum;
   std::cout << "=== " << m_apNum << ", " << m_staNum << " ===\n";
-  
+  /*
   //Downlink
   for (int i = 0; i < m_staNum; ++i){
     //std::cout << m_staInterface.GetAddress(i) << ":" <<
@@ -218,7 +222,7 @@ MultipleAp::SetApp()
     echoClientHelper.SetAttribute ("StartTime", TimeValue (Seconds (0.001+i/20.0)));
     m_pingApps.Add (echoClientHelper.Install (m_stas.Get (i)));
   }
-  /*
+ */ 
   // Uplink
   for (int i = 0; i < m_staNum; ++i){
     OnOffHelper onoff("ns3::UdpSocketFactory", InetSocketAddress(m_apInterface.GetAddress(static_cast<int>(i/serveNum)), 5011));    
@@ -246,7 +250,7 @@ MultipleAp::SetApp()
     echoClientHelper.SetAttribute ("StartTime", TimeValue (Seconds (0.001+i/20.0)));
     m_pingApps.Add (echoClientHelper.Install (m_ap.Get(static_cast<int>(i/serveNum))));
   }
-  */
+  
 }
 
 void
@@ -270,8 +274,8 @@ MultipleAp::Run()
        i != stats.end (); ++i){
       Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
       std::cout << "Flow " << i->first << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
-      std::cout << " Tx Bytes: " << i->second.txBytes << "\n";
-      std::cout << " Rx Bytes: " << i->second.rxBytes << "\n";
+      std::cout << " Tx Bytes: " << i->second.txBytes << ", ";
+      std::cout << " Rx Bytes: " << i->second.rxBytes << ", ";
       std::cout << " Throughput: " << i->second.rxBytes*8.0/19.0/1024/1024 << " Mbps\n";
       totalThroughput+=(i->second.rxBytes*8.0/19.0/1024/1024);
   }
