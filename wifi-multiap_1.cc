@@ -70,6 +70,7 @@ class MultipleAp
     Ipv4InterfaceContainer m_apInterface;
     ApplicationContainer m_cbrApps;
     ApplicationContainer m_pingApps;
+	ApplicationContainer m_sinkApps;
 };
 
 MultipleAp::MultipleAp()
@@ -113,7 +114,7 @@ MultipleAp::SetWifiMac()
   m_wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
   m_wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager", 
                    "DataMode",StringValue ("DsssRate11Mbps"), 
-                   "ControlMode",StringValue ("DsssRate11Mbps"));
+                   "ControlMode",StringValue ("DsssRate1Mbps"));
 
 
   m_stack.Install (m_ap);
@@ -193,7 +194,7 @@ MultipleAp::SetApp()
 {
   int serveNum = m_staNum/m_apNum;
   std::cout << "=== " << m_apNum << ", " << m_staNum << " ===\n";
-  /*
+  
   //Downlink
   for (int i = 0; i < m_staNum; ++i){
     //std::cout << m_staInterface.GetAddress(i) << ":" <<
@@ -212,7 +213,13 @@ MultipleAp::SetApp()
     onoff.SetAttribute("StartTime", TimeValue (Seconds (1.000000+std::rand()%100/100.0)));
     m_cbrApps.Add(onoff.Install(m_ap.Get(static_cast<int>(i/serveNum))));   
     m_cbrApps.Start(Seconds(1.0));
-    m_cbrApps.Stop(Seconds(20));
+    m_cbrApps.Stop(Seconds(30));	
+	
+	PacketSinkHelper sinkHelper ("ns3::UdpSocketFactory", InetSocketAddress(m_staInterface.GetAddress(i), 5010));
+    m_sinkApps.Start(Seconds(1.0));
+    m_sinkApps.Stop(Seconds(30));
+	m_sinkApps.Add(sinkHelper.Install(m_stas.Get(i)));
+	
     // NS3's bug any data transmission is after echo transmission
     uint16_t echoPort = 9;
     UdpEchoClientHelper echoClientHelper (m_apInterface.GetAddress(static_cast<int>(i/serveNum)), echoPort);
@@ -222,7 +229,7 @@ MultipleAp::SetApp()
     echoClientHelper.SetAttribute ("StartTime", TimeValue (Seconds (0.001+i/20.0)));
     m_pingApps.Add (echoClientHelper.Install (m_stas.Get (i)));
   }
- */ 
+  
   // Uplink
   for (int i = 0; i < m_staNum; ++i){
     OnOffHelper onoff("ns3::UdpSocketFactory", InetSocketAddress(m_apInterface.GetAddress(static_cast<int>(i/serveNum)), 5011));    
@@ -230,17 +237,21 @@ MultipleAp::SetApp()
     //onoff.SetAttribute("OffTime", StringValue ("ns3::ExponentialRandomVariable[Mean=0.05]"));
     onoff.SetAttribute("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
     onoff.SetAttribute("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
-        // NS3's bug data rate and start time should be different
+    // NS3's bug data rate and start time should be different
     std::ostringstream oss;
     oss << "20Mbps";
     onoff.SetAttribute("DataRate", StringValue(oss.str()));
     onoff.SetAttribute("PacketSize", UintegerValue (1024));
     onoff.SetAttribute("StartTime", TimeValue (Seconds (1.000000+std::rand()%100/100.0)));
     m_cbrApps.Add(onoff.Install(m_stas.Get(i)));
-    
-    //m_sinkApps.Add (sinkHelper.Install (m_ap.Get(static_cast<int>(i/serveNum))));
     m_cbrApps.Start(Seconds(1.0));
-    m_cbrApps.Stop(Seconds(30));
+    m_cbrApps.Stop(Seconds(30));	
+	
+	PacketSinkHelper sinkHelper ("ns3::UdpSocketFactory", InetSocketAddress(m_apInterface.GetAddress(static_cast<int>(i/serveNum)), 5011));
+    m_sinkApps.Start(Seconds(1.0));
+    m_sinkApps.Stop(Seconds(30));
+	m_sinkApps.Add(sinkHelper.Install(m_ap.Get(static_cast<int>(i/serveNum))));
+	
     // NS3's bug any data transmission is after echo transmission
     uint16_t echoPort = 10;
     UdpEchoClientHelper echoClientHelper (m_staInterface.GetAddress(i), echoPort);
@@ -259,7 +270,7 @@ MultipleAp::Run()
   double totalThroughput = 0;
   FlowMonitorHelper flowmon;
   Ptr<FlowMonitor> monitor = flowmon.InstallAll ();
-  Simulator::Stop (Seconds (22.0));
+  Simulator::Stop (Seconds (32.0));
   //Config::Connect ("/NodeList/*/DeviceList/*/Phy/State/RxOk",
   // MakeCallback (&MultipleAp::PhyRxOkTrace, this));
   //Config::Connect ("/NodeList/*/DeviceList/*/Phy/State/RxError",
@@ -276,8 +287,8 @@ MultipleAp::Run()
       std::cout << "Flow " << i->first << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
       std::cout << " Tx Bytes: " << i->second.txBytes << ", ";
       std::cout << " Rx Bytes: " << i->second.rxBytes << ", ";
-      std::cout << " Throughput: " << i->second.rxBytes*8.0/19.0/1024/1024 << " Mbps\n";
-      totalThroughput+=(i->second.rxBytes*8.0/19.0/1024/1024);
+      std::cout << " Throughput: " << i->second.rxBytes*8.0/29.0/1024/1024 << " Mbps\n";
+      totalThroughput+=(i->second.rxBytes*8.0/29.0/1024/1024);
   }
   Simulator::Destroy ();
   std::cout << "Total throughput: " << totalThroughput << "\n";
