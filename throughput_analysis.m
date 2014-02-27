@@ -11,12 +11,12 @@ function throughput = throughput_analysis(n, datarate)
     E_L = 1024*8; % bit
     T_sifs = 10; %us
     T_difs = 10+20*2; %us
-    preamble = 192; %us
+    Phy_header = 192; %us
     Mac_header = 272; %bit
     ack_size = 112; % bit
 % Notice that data using datarate to transmit, control using 1 Mbps to transmit
-    T_S_BAS = preamble+(E_L+(Mac_header+preamble))/datarate+T_sifs+T_difs+(preamble+ack_size);
-    T_C_BAS = preamble+(E_L+(Mac_header+preamble))/datarate+T_difs;
+    T_S_BAS = (E_L+Mac_header)/datarate+Phy_header+T_sifs+T_difs+(Phy_header+ack_size);
+    T_C_BAS = (E_L+Mac_header)/datarate+Phy_header+T_difs;
     T_S = T_S_BAS;
     T_C = T_C_BAS;
     sigma = 20;
