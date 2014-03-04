@@ -26,7 +26,7 @@
 #include "ns3/flow-monitor-module.h"
 #include "ns3/internet-module.h"
 #include <iostream>
-
+#include <time.h>
 #define PI 3.14159265
 #define PI_e5 314158
 
@@ -64,13 +64,14 @@ class MultipleAp
     NqosWifiMacHelper m_wifiMac;
     YansWifiPhyHelper m_wifiPhy;
     Ptr<YansWifiChannel> m_wifiChannel;
+    YansWifiChannelHelper m_wifiChannel2;
     PacketSocketAddress m_socket;
     InternetStackHelper m_stack;
     Ipv4InterfaceContainer m_staInterface;
     Ipv4InterfaceContainer m_apInterface;
     ApplicationContainer m_cbrApps;
     ApplicationContainer m_pingApps;
-	ApplicationContainer m_sinkApps;
+	  ApplicationContainer m_sinkApps;
 };
 
 MultipleAp::MultipleAp()
@@ -98,17 +99,26 @@ MultipleAp::SetWifiMac()
   // Create wifi channel
   
   Ptr<MatrixPropagationLossModel> lossModel = CreateObject<MatrixPropagationLossModel> ();
-  lossModel->SetDefaultLoss (20);
+  lossModel->SetDefaultLoss (2);
   m_wifiChannel = CreateObject <YansWifiChannel> ();
   m_wifiChannel->SetPropagationLossModel (lossModel);
   m_wifiChannel->SetPropagationDelayModel (CreateObject <ConstantSpeedPropagationDelayModel> ());
   m_wifiPhy.SetChannel(m_wifiChannel);
-  m_wifiPhy.Set("EnergyDetectionThreshold", DoubleValue (-110.0) );
-  m_wifiPhy.Set("CcaMode1Threshold", DoubleValue (-110.0) );
-  m_wifiPhy.Set("TxPowerStart", DoubleValue (15.0) );
-  m_wifiPhy.Set("TxPowerEnd", DoubleValue (15.0) );
-  m_wifiPhy.Set("RxGain", DoubleValue (0) );
-  m_wifiPhy.Set("RxNoiseFigure", DoubleValue (7) );
+  /*
+  m_wifiChannel2.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+  m_wifiChannel2.AddPropagationLoss ("ns3::TwoRayGroundPropagationLossModel",
+                                  "SystemLoss",DoubleValue (1.0),
+                                  "MinDistance",DoubleValue (0.5),
+                                  "HeightAboveZ",DoubleValue (1) );
+  m_wifiPhy.SetChannel (m_wifiChannel2.Create());
+  */
+  m_wifiPhy.Set("EnergyDetectionThreshold", DoubleValue(-71.0));
+  m_wifiPhy.Set("CcaMode1Threshold", DoubleValue(-71.0));
+  m_wifiPhy.Set("TxPowerStart", DoubleValue(15.0));
+  m_wifiPhy.Set("TxPowerEnd", DoubleValue(15.0));
+  m_wifiPhy.Set("TxGain", DoubleValue(0));
+  m_wifiPhy.Set("RxGain", DoubleValue(0));
+  m_wifiPhy.Set("RxNoiseFigure", DoubleValue(7));
   // IP interface and MAC
   //m_wifi.SetRemoteStationManager ("ns3::ArfWifiManager");
   m_wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
@@ -229,7 +239,7 @@ MultipleAp::SetApp()
     echoClientHelper.SetAttribute ("StartTime", TimeValue (Seconds (0.001+i/20.0)));
     m_pingApps.Add (echoClientHelper.Install (m_stas.Get (i)));
   }
-  
+ 
   // Uplink
   for (int i = 0; i < m_staNum; ++i){
     OnOffHelper onoff("ns3::UdpSocketFactory", InetSocketAddress(m_apInterface.GetAddress(static_cast<int>(i/serveNum)), 5011));    
@@ -350,6 +360,8 @@ int main (int argc, char *argv[])
   //cmd.Usage ("[apNum] [staNum]");
   std::string min_cw = "31";
   std::string max_cw = "1023";
+  RngSeedManager::SetSeed (time(NULL));  // Changes seed from default of 1 to 3
+  RngSeedManager::SetRun (time(NULL));   // Changes run number from default of 1 to 7
   Config::SetDefault ("ns3::Dcf::MinCw",StringValue(min_cw));
   Config::SetDefault ("ns3::Dcf::MaxCw",StringValue(max_cw));
   cmd.AddValue ("apNum", "number of WiFi APs", apNum);
