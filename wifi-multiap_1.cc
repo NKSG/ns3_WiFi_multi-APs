@@ -97,23 +97,23 @@ MultipleAp::SetWifiMac()
   m_wifiMac = NqosWifiMacHelper::Default ();
   m_wifiPhy = YansWifiPhyHelper::Default ();
   // Create wifi channel
-  
+  /*
   Ptr<MatrixPropagationLossModel> lossModel = CreateObject<MatrixPropagationLossModel> ();
-  lossModel->SetDefaultLoss (2);
+  lossModel->SetDefaultLoss (85);
   m_wifiChannel = CreateObject <YansWifiChannel> ();
   m_wifiChannel->SetPropagationLossModel (lossModel);
   m_wifiChannel->SetPropagationDelayModel (CreateObject <ConstantSpeedPropagationDelayModel> ());
   m_wifiPhy.SetChannel(m_wifiChannel);
-  /*
+  */
   m_wifiChannel2.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
   m_wifiChannel2.AddPropagationLoss ("ns3::TwoRayGroundPropagationLossModel",
                                   "SystemLoss",DoubleValue (1.0),
                                   "MinDistance",DoubleValue (0.5),
-                                  "HeightAboveZ",DoubleValue (1) );
+                                  "HeightAboveZ",DoubleValue (0.1) );
   m_wifiPhy.SetChannel (m_wifiChannel2.Create());
-  */
-  m_wifiPhy.Set("EnergyDetectionThreshold", DoubleValue(-71.0));
-  m_wifiPhy.Set("CcaMode1Threshold", DoubleValue(-71.0));
+  
+  m_wifiPhy.Set("EnergyDetectionThreshold", DoubleValue(-78.0));
+  m_wifiPhy.Set("CcaMode1Threshold", DoubleValue(-78.0));
   m_wifiPhy.Set("TxPowerStart", DoubleValue(15.0));
   m_wifiPhy.Set("TxPowerEnd", DoubleValue(15.0));
   m_wifiPhy.Set("TxGain", DoubleValue(0));
@@ -184,12 +184,12 @@ MultipleAp::SetMobility()
   for(int i=0; i<m_staNum; ++i){
    size_t inAp = i/(m_staNum/m_apNum);
    int serveNum = m_staNum/m_apNum;
-   double nodeRadius = 10;
+   double nodeRadius = 100;
    m_nodePosAlloc->Add(Vector(m_radius*std::cos(inAp*2*PI/m_apNum)+
                        nodeRadius*std::cos(2*PI/serveNum*(i%serveNum)),
                        m_radius*std::sin(inAp*2*PI/m_apNum)+
                        nodeRadius*std::sin(2*PI/serveNum*(i%serveNum)),
-                       1));
+                       0.1));
   }
   m_mobility.SetPositionAllocator(m_nodePosAlloc);
   for(int i=0; i<m_staNum; ++i){
